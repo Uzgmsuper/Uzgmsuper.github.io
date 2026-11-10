@@ -31,6 +31,10 @@ select{padding:6px;border-radius:8px;border:1px solid var(--bd);background:var(-
 #panels{display:contents}
 #left{grid-column:1;grid-row:1;overflow:auto;background:var(--pn);border-right:1px solid var(--bd)}
 #right{grid-column:3;grid-row:1;overflow:auto;background:var(--pn);border-left:1px solid var(--bd)}}
+.nm{display:inline-flex;align-items:center;gap:3px}
+.nm input{width:64px;padding:3px 6px;border:1px solid var(--bd);border-radius:6px;background:var(--pn);color:var(--tx);font:inherit;text-align:right}
+.nm em{font-style:normal;color:var(--mu);font-size:12px;min-width:16px}
+.chk{display:flex;align-items:center;gap:8px;margin:6px 0}
 </style></head><body>
 <div id="app">
 <div id="view"><canvas id="c"></canvas>
@@ -39,15 +43,16 @@ select{padding:6px;border-radius:8px;border:1px solid var(--bd);background:var(-
 <div id="panels">
 <aside id="left"><h3 style="margin-top:0">모델 (슬라이더 값 유지)</h3><div class="g"><button class="btn" data-g="m">남성 모델</button><button class="btn" data-g="f">여성 모델</button></div><h3>체형 프리셋</h3><div class="g"><button class="btn" data-p="m">남성</button><button class="btn" data-p="f">여성</button><button class="btn" data-p="mm">근육질 남성</button><button class="btn" data-p="ff">곡선형 여성</button></div><div id="tabs"></div><div id="sliders"></div></aside>
 <aside id="right">
+<h3 style="margin-top:0">머리카락</h3><div id="hairUI"></div>
 <h3>눈썹</h3><div class="row"><div><span>눈썹색</span><input type="color" id="hc" value="#2a1c14"></div></div>
 <h3>재질 · 조명</h3>
 <div class="row"><div><span>기본 피부색</span><input type="color" id="skin" value="#d9a98a"></div></div>
-<div class="row"><div><span>광택</span></div><input type="range" id="rough" min=".2" max="1" step=".01" value=".55"></div>
+<div class="row"><div><span>광택</span><span class="nm"><input type="number" id="roughN" inputmode="decimal" enterkeyhint="done" step="any" min="20" max="100"><em>%</em></span></div><input type="range" id="rough" min=".2" max="1" step=".01" value=".55"></div>
 <div class="row"><div><span>조명</span><select id="light"><option value="0">스튜디오</option><option value="1">따뜻함</option><option value="2">차가움</option></select></div></div>
-<h3>눈동자</h3><div class="row"><div><span>눈동자색</span><span><input type="color" id="iris" value="#3a2417"> <button class="btn" id="irisR" style="padding:1px 7px">↺</button></span></div></div><div class="row"><div><span>눈동자 반사율</span><b id="erv"></b></div><input type="range" id="eref" min="0" max="1" step=".01" value=".75"></div>
+<h3>눈동자</h3><div class="row"><div><span>눈동자색</span><span><input type="color" id="iris" value="#3a2417"> <button class="btn" id="irisR" style="padding:1px 7px">↺</button></span></div></div><div class="row"><div><span>눈동자 반사율</span><span class="nm"><input type="number" id="ervN" inputmode="decimal" enterkeyhint="done" step="any" min="0" max="100"><em>%</em></span></div><input type="range" id="eref" min="0" max="1" step=".01" value=".75"></div>
 <h3>부위별 색칠 (↺ 기본색으로)</h3><div id="paint"></div><button class="btn" id="bPaintReset" style="width:100%;margin-top:4px">부위 색 모두 초기화</button><h3>저장 · 내보내기</h3>
 <div class="g"><button class="btn" id="bSave">설정 저장</button><button class="btn" id="bLoad">불러오기</button><button class="btn" id="bReset">초기화</button><button class="btn" id="bRand">랜덤</button></div>
-<button class="btn p" id="bGlb">GLB 내보내기</button><div id="st"></div><p style="font-size:11px;color:var(--mu);margin-top:10px">Superhero Male/Female 베이스 메시 + 스켈레톤 사용. 텍스처 PNG가 없어 단색 재질로 표시돼요.</p>
+<button class="btn p" id="bGlb">GLB 내보내기</button><div id="st"></div><p style="font-size:11px;color:var(--mu);margin-top:10px">Superhero Male/Female 베이스 메시 + 스켈레톤 사용. 텍스처 PNG가 없어 단색 재질로 표시돼요. 머리카락은 두피 형태를 따라가는 절차적 메시예요.</p>
 </aside></div></div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -121,9 +126,9 @@ function prep(k){const o=MD[GM[k]],h=o.h,bin=Uint8Array.from(atob(o.b),c=>c.char
  return{nm,par:h.parent,Jo:h.pos,q,wqi:wq.map(x=>x.clone().invert()),topo,ms,L:{tip,ear,cy,eye,mouth:[0,my,mz]},by:k==='f'?1.3:1.32}}
 skin.color.set(0xffffff);skin.vertexColors=true;
 const eyeM=new THREE.MeshPhysicalMaterial({vertexColors:true,roughness:.29,clearcoat:.75,clearcoatRoughness:.05});
-const applyEye=()=>{const r=+$('#eref').value;eyeM.roughness=1-.95*r;eyeM.clearcoat=r;$('#erv').textContent=Math.round(r*100)+'%'};
+const applyEye=()=>{const r=+$('#eref').value;eyeM.roughness=1-.95*r;eyeM.clearcoat=r};
 const CH={};
-function build(k){if(C){G.remove(C.root);C.ms.forEach(m=>{m.o.geometry.dispose();G.remove(m.o)})}
+function build(k){if(C){G.remove(C.root);C.ms.forEach(m=>{m.o.geometry.dispose();G.remove(m.o)});if(C.hr){G.remove(C.hr.o);C.hr.o.geometry.dispose();C.hr=null}}
  C=CH[k]||(CH[k]=prep(k));
  const bones=C.nm.map((n,i)=>{const b=new THREE.Bone();b.name=n;b.quaternion.copy(C.q[i]);return b});
  C.par.forEach((p,i)=>{if(p>=0)bones[p].add(bones[i])});C.bones=bones;C.root=bones[C.topo[0]];G.add(C.root);
@@ -132,6 +137,7 @@ function build(k){if(C){G.remove(C.root);C.ms.forEach(m=>{m.o.geometry.dispose()
   g.setAttribute('position',m.A);g.setAttribute('normal',m.N);g.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(m.Jx,4));g.setAttribute('skinWeight',new THREE.Float32BufferAttribute(m.Wt,4));
   if(m.col){m.cA=new THREE.BufferAttribute(m.col,3);g.setAttribute('color',m.cA)}g.setIndex(new THREE.BufferAttribute(m.I,1));
   const o=m.o=new THREE.SkinnedMesh(g,mats[i]);o.name=nms[i];o.frustumCulled=false;o.castShadow=true;o.receiveShadow=i===2;G.add(o);o.bind(sk,new THREE.Matrix4())});
+ mkHair();
  paint();dirty=true}
 // ---------- 부위별 색칠 (정점 색, 스킨 웨이트로 경계를 부드럽게) ----------
 const RN=[['head','얼굴'],['neck','목'],['chest','가슴·상체'],['belly','배·골반'],['arms','팔'],['hands','손'],['legs','다리'],['feet','발'],['lips','입술'],['iris','눈동자']];
@@ -178,19 +184,111 @@ function volume(p,i,m){const v=V,n=m.n0,nz=n[3*i+2],tr=m.tr[i],fr=cl((nz+.15)/.5
 function deform(){if(!C)return;const v=V,S=C.nm.map(n=>jscale(n,v)),Jo=C.Jo,Jn=[],p=[0,0,0];
  C.topo.forEach(i=>{const a=C.par[i];Jn[i]=a<0?Jo[i].slice():[0,1,2].map(k=>Jn[a][k]+S[a][k]*(Jo[i][k]-Jo[a][k]))});
  let mn=9,mx=-9;
- C.ms.forEach((m,mi)=>{const out=m.A.array;
+ AM().forEach((m,mi)=>{const out=m.A.array;
   for(let i=0;i<m.n;i++){p[0]=m.P0[3*i];p[1]=m.P0[3*i+1];p[2]=m.P0[3*i+2];
    if(mi===2)volume(p,i,m);if(m.hw[i]>.01)face(p,m.hw[i],C.L);
    let X=0,Y=0,Z=0;for(let c=0;c<4;c++){const w=m.Wt[i*4+c];if(!w)continue;const j=m.Jx[i*4+c],o=Jo[j],a=Jn[j],s=S[j];X+=w*(a[0]+s[0]*(p[0]-o[0]));Y+=w*(a[1]+s[1]*(p[1]-o[1]));Z+=w*(a[2]+s[2]*(p[2]-o[2]))}
    out[3*i]=X;out[3*i+1]=Y;out[3*i+2]=Z;if(mi===2){if(Y<mn)mn=Y;if(Y>mx)mx=Y}}});
  const H=v.height;
- C.ms.forEach(m=>{const o=m.A.array;for(let i=0;i<o.length;i+=3){o[i]*=H;o[i+1]=(o[i+1]-mn)*H;o[i+2]*=H}m.N.array.set(nrm(o,m.I,m.wid,m.nw));m.A.needsUpdate=m.N.needsUpdate=true});
+ AM().forEach(m=>{const o=m.A.array;for(let i=0;i<o.length;i+=3){o[i]*=H;o[i+1]=(o[i+1]-mn)*H;o[i+2]*=H}m.N.array.set(nrm(o,m.I,m.wid,m.nw));m.A.needsUpdate=m.N.needsUpdate=true});
  Jn.forEach(a=>{a[0]*=H;a[1]=(a[1]-mn)*H;a[2]*=H});
  C.topo.forEach(i=>{const a=Jn[i],q=C.par[i],b=C.bones[i];if(q<0)b.position.set(a[0],a[1],a[2]);else b.position.set(a[0]-Jn[q][0],a[1]-Jn[q][1],a[2]-Jn[q][2]).applyQuaternion(C.wqi[q])});
  G.updateMatrixWorld(true);C.sk.calculateInverses();
  ht=(mx-mn)*H;$('#info').textContent='키 약 '+Math.round(ht*100)+'cm'}
 const G=new THREE.Group();G.name='Human';sc.add(G);
 const update=()=>deform();
+// ---------- 숫자 입력 (슬라이더 ↔ 키보드/모바일 키패드) ----------
+const bindNum=(rg,nm,f=1,dec=0)=>{let ty=false;const sh=()=>{if(!ty)nm.value=+(rg.value*f).toFixed(dec)},pv=()=>parseFloat(String(nm.value).replace(',','.'));
+ rg.addEventListener('input',sh);
+ nm.addEventListener('input',()=>{ty=true;const n=pv();if(!isFinite(n))return;const v=n/f;if(v<+rg.min-1e-9||v>+rg.max+1e-9)return;rg.value=v;rg.dispatchEvent(new Event('input'))});
+ const done=()=>{ty=false;const n=pv();if(isFinite(n)){rg.value=cl(n/f,+rg.min,+rg.max);rg.dispatchEvent(new Event('input'))}sh()};
+ nm.addEventListener('change',done);nm.addEventListener('blur',done);nm.addEventListener('keydown',e=>{if(e.key==='Enter')nm.blur()});sh()};
+function mkRow(par,l,mn,mx,st,val,f,u,dec,fn){const r=document.createElement('div'),A=+(mn*f).toFixed(3),Z=+(mx*f).toFixed(3);r.className='row';
+ r.innerHTML='<div><span>'+l+'</span><span class="nm"><input type="number" inputmode="decimal" enterkeyhint="done" step="any" min="'+A+'" max="'+Z+'" title="'+A+' ~ '+Z+u+'"><em>'+u+'</em></span></div><input type="range" min="'+mn+'" max="'+mx+'" step="'+st+'">';
+ const rg=r.querySelector('input[type=range]'),nm=r.querySelector('input[type=number]');rg.value=val;bindNum(rg,nm,f,dec);rg.addEventListener('input',()=>fn(+rg.value));par.append(r);return r}
+
+// ---------- 머리카락 ----------
+// 두피 형태를 따라가는 얇은 쉘(머리 뼈에 스킨) + 아래로 늘어지는 머리(길이) + 포니테일/번 부속
+const NU=160,NE=16,NH=18,RT=NE+1+NH,BL=8,BU=16,TS=14,TR=10,NM=RT*NU,NB=(BL+1)*BU,NT=(TS+1)*TR,NV=NM+NB+NT,PI=Math.PI;
+const hairM=new THREE.MeshPhysicalMaterial({vertexColors:true,roughness:.5,side:THREE.DoubleSide,sheen:new THREE.Color(0x555555),clearcoat:.15,clearcoatRoughness:.5});
+const HS={
+ none:{n:'없음 (민머리)'},
+ crew:{n:'짧은머리 (크루컷)',hl:[60,66,76,86,100,106],base:6,hang:0,part:0,d:{len:2,vol:1,bangs:0,wave:0,curl:0,partOn:0}},
+ part:{n:'가르마머리',hl:[62,68,80,92,108,114],base:6,hang:1,part:2,d:{len:8,vol:1.15,bangs:.3,wave:0,curl:0,partOn:1,part:.3}},
+ bob:{n:'단발 (보브)',hl:[63,68,80,96,114,120],base:0,hang:1,part:1,d:{len:18,vol:1.2,bangs:.35,wave:0,curl:.5,partOn:0,part:.5}},
+ long:{n:'긴머리',hl:[63,68,80,96,114,120],base:0,hang:1,part:1,d:{len:50,vol:1,bangs:.2,wave:.2,curl:0,partOn:1,part:.5}},
+ pony:{n:'포니테일',hl:[60,64,72,84,96,100],base:0,hang:0,part:0,d:{len:35,vol:1,bangs:.1,wave:.1,curl:0,partOn:0}},
+ bun:{n:'올림머리 (번)',hl:[60,64,72,84,96,100],base:0,hang:0,part:0,d:{len:10,vol:1,bangs:.1,wave:0,curl:0,partOn:0}}};
+const PR_HS={m:'part',f:'long',mm:'crew',ff:'long'};
+const HV={style:'part',gloss:.55,color:'#2a1c14',part:.3,...HS.part.d};let hdirty=false;
+const KA=[0,.785,1.31,1.745,2.44,PI],ipol=(t,x)=>{for(let k=1;k<6;k++)if(x<=KA[k])return t[k-1]+(t[k]-t[k-1])*(x-KA[k-1])/(KA[k]-KA[k-1]);return t[5]};
+const sm=(x,a,b)=>{const t=cl((x-a)/(b-a));return t*t*(3-2*t)};
+const NZ=Array.from({length:NU},(_,i)=>{const a=Math.sin(i*12.9898+4.1)*43758.5453;return a-Math.floor(a)});
+const AM=()=>C.hr?C.ms.concat([C.hr]):C.ms;
+function hdata(){if(C.hd)return C.hd;const B=C.ms[2],L=C.L;let yT=-9;
+ for(let i=0;i<B.n;i++)if(B.hw[i]>.5&&B.P0[3*i+1]>yT)yT=B.P0[3*i+1];
+ const c=[0,yT-.9*(yT-L.eye[0].c[1]),L.ear[2]],AZ=48,EL=24,mp=new Float32Array(AZ*EL),ix=(a,b)=>((a+AZ)%AZ)*EL+Math.min(EL-1,Math.max(0,b));
+ for(let i=0;i<B.n;i++)if(B.hw[i]>.5){const dx=B.P0[3*i]-c[0],dy=B.P0[3*i+1]-c[1],dz=B.P0[3*i+2]-c[2];if(dy<-.12)continue;const r=Math.hypot(dx,dy,dz),e=Math.acos(dy/r),a=Math.floor((Math.atan2(dx,dz)+PI)/(2*PI)*AZ)%AZ,b=Math.min(EL-1,Math.floor(e/PI*EL));if(r>mp[a*EL+b])mp[a*EL+b]=r}
+ for(let it=0;it<8;it++){const o=mp.slice();for(let a=0;a<AZ;a++)for(let b=0;b<EL;b++)if(!o[a*EL+b]){let s=0,k=0;for(const[da,db]of[[1,0],[-1,0],[0,1],[0,-1]]){const v=o[ix(a+da,b+db)];if(v){s+=v;k++}}if(k)mp[a*EL+b]=s/k}}
+ for(let i=0;i<mp.length;i++)if(!mp[i])mp[i]=.1;
+ for(let it=0;it<2;it++){const o=mp.slice();for(let a=0;a<AZ;a++)for(let b=0;b<EL;b++){let s=0,w=0;for(let da=-1;da<=1;da++)for(let db=-1;db<=1;db++){const ww=da&&db?1:da||db?2:4;s+=ww*o[ix(a+da,b+db)];w+=ww}mp[a*EL+b]=s/w}}
+ const Rf=(u,e)=>{const a=((u+PI)/(2*PI)*AZ-.5+AZ)%AZ,b=cl(e/PI*EL-.5,0,EL-1.001),a0=Math.floor(a),a1=(a0+1)%AZ,fa=a-a0,b0=Math.floor(b),fb=b-b0;
+  return(mp[a0*EL+b0]*(1-fa)+mp[a1*EL+b0]*fa)*(1-fb)+(mp[a0*EL+b0+1]*(1-fa)+mp[a1*EL+b0+1]*fa)*fb+.003};
+ // 목·어깨 단면(높이별 앞/뒤/좌우 한계) → 긴 머리가 몸을 뚫지 않게 밀어냄
+ const NS=44,zb=new Float32Array(NS).fill(9),zf=new Float32Array(NS).fill(-9),ax=new Float32Array(NS);
+ for(let i=0;i<B.n;i++){if(B.hw[i]>.3||B.rg[8*i+4]+B.rg[8*i+5]>.35)continue;const x=B.P0[3*i],y=B.P0[3*i+1],z=B.P0[3*i+2],k=Math.floor((yT-y)/.015);if(k<0||k>=NS)continue;
+  if(z<zb[k])zb[k]=z;if(z>zf[k])zf[k]=z;if(Math.abs(x)>ax[k])ax[k]=Math.abs(x)}
+ for(let k=0;k<NS;k++)if(zb[k]>8){zb[k]=k?zb[k-1]:-.06;zf[k]=k?zf[k-1]:.06;ax[k]=k?ax[k-1]:.06}
+ for(const a of[zb,zf,ax]){const o=a.slice();for(let k=0;k<NS;k++)a[k]=(a===zb?Math.min:Math.max)(o[Math.max(0,k-1)],o[k],o[Math.min(NS-1,k+1)])}
+ const push=(p,su,cu)=>{const k=cl(Math.floor((yT-p[1])/.015),0,NS-1),a=ax[k]+.012,b=zb[k]-.012,f=zf[k]+.012;if(Math.abs(p[0])>=a||p[2]<=b||p[2]>=f)return;
+  let t=9;if(Math.abs(su)>1e-4)t=Math.min(t,(Math.sign(su)*a-p[0])/su);if(cu<-1e-4)t=Math.min(t,(b-p[2])/cu);else if(cu>1e-4)t=Math.min(t,(f-p[2])/cu);
+  if(t>0&&t<9){p[0]+=su*t;p[2]+=cu*t}};
+ return C.hd={c,yT,Rf,push}}
+function mkHair(){const nm=C.nm,iH=nm.indexOf('Head'),iS=nm.indexOf('spine_03'),n=NV,I=[],wid=new Uint32Array(n);let nw=0;
+ const grid=(b,R,Cn,tp,bp)=>{let t=-1,u=-1;for(let r=0;r<R;r++)for(let i=0;i<Cn;i++){const k=b+r*Cn+i;if(tp&&r===0){if(t<0)t=nw++;wid[k]=t}else if(bp&&r===R-1){if(u<0)u=nw++;wid[k]=u}else wid[k]=nw++}
+  for(let r=0;r<R-1;r++)for(let i=0;i<Cn;i++){const a=b+r*Cn+i,bb=b+r*Cn+(i+1)%Cn,c2=b+(r+1)*Cn+i,d=b+(r+1)*Cn+(i+1)%Cn;I.push(a,c2,bb,bb,c2,d)}};
+ grid(0,RT,NU,true,false);grid(NM,BL+1,BU,true,true);grid(NM+NB,TS+1,TR,false,false);
+ const m=C.hr={n,P0:new Float32Array(n*3),Jx:new Uint16Array(n*4),Wt:new Float32Array(n*4),I:Uint16Array.from(I),wid,nw,hw:new Float32Array(n),col:new Float32Array(n*3),f:new Float32Array(n),pm:new Float32Array(n)};
+ for(let i=0;i<n;i++){m.Jx[i*4]=iH;m.Jx[i*4+1]=iS}
+ const g=new THREE.BufferGeometry();m.A=new THREE.BufferAttribute(new Float32Array(n*3),3);m.N=new THREE.BufferAttribute(new Float32Array(n*3),3);
+ g.setAttribute('position',m.A);g.setAttribute('normal',m.N);g.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(m.Jx,4));g.setAttribute('skinWeight',m.wA=new THREE.BufferAttribute(m.Wt,4));
+ m.cA=new THREE.BufferAttribute(m.col,3);g.setAttribute('color',m.cA);g.setIndex(new THREE.BufferAttribute(m.I,1));
+ const o=m.o=new THREE.SkinnedMesh(g,hairM);o.name='Hair';o.frustumCulled=false;o.castShadow=true;G.add(o);o.bind(C.sk,new THREE.Matrix4());hfill()}
+function hcol(){const m=C&&C.hr;if(!m)return;const hc=new THREE.Color(HV.color),sc=new THREE.Color(baseC()).multiplyScalar(.8),o=m.col;
+ for(let i=0;i<m.n;i++){const f=m.f[i],p=m.pm[i];o[3*i]=hc.r*f*(1-p)+sc.r*p;o[3*i+1]=hc.g*f*(1-p)+sc.g*p;o[3*i+2]=hc.b*f*(1-p)+sc.b*p}m.cA.needsUpdate=true}
+function hfill(){const m=C&&C.hr;if(!m)return;const S=HS[HV.style];m.o.visible=HV.style!=='none';hairM.roughness=1-.85*HV.gloss;dirty=true;if(!m.o.visible)return;
+ const{c,Rf,push}=hdata(),P=m.P0,F=m.f,PM=m.pm,W=m.Wt,len=HV.len,vol=HV.vol,th0=(.004+.0007*Math.min(len,15))*vol+.003,
+  Lh0=S.hang?Math.max(0,len-S.base)/100:0,pOn=S.part===2||(S.part===1&&HV.partOn),up=(HV.part-.5)*1.2;
+ const put=(k,x,y,z,f,pm)=>{P[3*k]=x;P[3*k+1]=y;P[3*k+2]=z;F[k]=f;PM[k]=pm||0;const w=cl(1-(c[1]-.04-y)/.22);W[4*k]=w;W[4*k+1]=1-w};
+ for(let k=NM;k<NV;k++)put(k,c[0],c[1],c[2],1,0);
+ for(let i=0;i<NU;i++){const u=i/NU*2*PI-PI,au=Math.abs(u),su=Math.sin(u),cu=Math.cos(u),n1=NZ[i],n2=NZ[(i+7)%NU];
+  const eh=ipol(S.hl,au)*PI/180+HV.bangs*.42*Math.exp(-u*u/.64)+.02*(n1-.5),Lh=Lh0*sm(au,.7,1.4)*(.6+.4*sm(au,1.4,2.8))*(.93+.07*n2);let ph;
+  for(let r=0;r<=NE;r++){const e=eh*r/NE,se=Math.sin(e),ce=Math.cos(e),R0=Rf(u,e),tk=th0*(.5+.5*sm(1-r/NE,0,.3));let pm=0,rr=R0+tk;
+   if(pOn){const d=Math.abs(Math.atan2(Math.sin(u-up),Math.cos(u-up)))*R0*se,gp=.0055*sm(e,.05,.5);if(gp>1e-5)pm=cl(1.4-d/gp);rr-=.0035*pm}
+   const x=c[0]+rr*se*su,y=c[1]+rr*ce,z=c[2]+rr*se*cu;put(r*NU+i,x,y,z,(.88+.24*n1)*(1+.14*Math.exp(-(((e-.75)/.33)**2))),pm);ph=[x,y,z]}
+  for(let k=1;k<=NH;k++){const q=k/NH,s=q*Lh,o=(.012+(vol-1)*.012)*sm(q,0,.35)+(vol-1)*.012*q-HV.curl*.055*q*q,wv=HV.wave*.016*Math.sin(s*50+u*3)*Math.sqrt(q);
+   const p=[ph[0]+su*o+cu*wv,ph[1]-s,ph[2]+cu*o-su*wv];push(p,su,cu);put((NE+k)*NU+i,p[0],p[1],p[2],(.88+.24*n1)*(1-.06*q),0)}}
+ if(HV.style==='bun'){const e0=.7,R0=Rf(PI,e0)+th0,rb=.016+.0022*len,dy=Math.cos(e0),dz=-Math.sin(e0),cy=c[1]+dy*(R0+rb*.55),cz=c[2]+dz*(R0+rb*.55);
+  for(let j=0;j<=BL;j++){const th=PI*j/BL;for(let i=0;i<BU;i++){const a=2*PI*i/BU,rg=rb*Math.sin(th);put(NM+j*BU+i,c[0]+rg*Math.sin(a),cy+rb*.9*Math.cos(th),cz+rg*Math.cos(a),.85+.2*NZ[(i*9+j)%NU],0)}}}
+ if(HV.style==='pony'){const e0=1.1,R0=Rf(PI,e0)+th0,B0=[c[0],c[1]+R0*Math.cos(e0),c[2]-R0*Math.sin(e0)],Lt=len/100;
+  for(let j=0;j<=TS;j++){const q=j/TS,p=[B0[0]+HV.wave*.02*Math.sin(q*9),B0[1]-Lt*q,B0[2]-.012-.05*Math.sin(Math.min(q*2,1)*PI/2)];push(p,0,-1);
+   const rd=(.024+.005*Math.sin(q*PI))*(1-.78*q**1.3)*Math.sqrt(vol);
+   for(let i=0;i<TR;i++){const a=2*PI*i/TR;put(NM+NB+j*TR+i,p[0]+rd*Math.sin(a),p[1],p[2]+rd*Math.cos(a),.85+.2*NZ[(i*13+j*3)%NU],0)}}}
+ m.wA.needsUpdate=true;hcol()}
+const hStyle=(k,quiet)=>{HV.style=k;Object.assign(HV,HS[k].d||{});if(!quiet)hdirty=true;hairUI();hfill()};
+function hairUI(){const e=$('#hairUI');if(!e)return;e.innerHTML='';const S=HS[HV.style],add=h=>{const r=document.createElement('div');r.className='row';r.innerHTML=h;e.append(r);return r};
+ const r1=add('<div><span>스타일</span><select>'+Object.keys(HS).map(k=>'<option value="'+k+'">'+HS[k].n+'</option>').join('')+'</select></div>'),sel=r1.querySelector('select');sel.value=HV.style;sel.onchange=()=>hStyle(sel.value);
+ const r2=add('<div><span>머리색</span><input type="color"></div>'),ci=r2.querySelector('input');ci.value=HV.color;ci.oninput=()=>{HV.color=ci.value;hdirty=true;hcol()};
+ if(HV.style==='none')return;
+ const sd=(l,k,mn,mx,f,u)=>mkRow(e,l,mn,mx,f===1?1:.01,HV[k],f,u,0,v=>{HV[k]=v;hdirty=true;hfill()});
+ sd({pony:'꼬리 길이',bun:'번 크기'}[HV.style]||'머리 길이','len',1,{crew:15,part:40,bob:40,long:90,pony:70,bun:25}[HV.style],1,'cm');
+ sd('볼륨','vol',.5,2.5,100,'%');sd('앞머리 (이마 덮기)','bangs',0,1,100,'%');
+ if(S.hang||HV.style==='pony')sd('웨이브','wave',0,1,100,'%');
+ if(S.hang)sd('끝 안말이','curl',0,1,100,'%');
+ sd('광택 · 반사','gloss',.1,1,100,'%');
+ if(S.part){if(S.part===1){const r=add('<label class="chk"><input type="checkbox"> 가르마 넣기</label>'),cb=r.querySelector('input');cb.checked=!!HV.partOn;cb.onchange=()=>{HV.partOn=cb.checked?1:0;hdirty=true;hfill();hairUI()}}
+  if(S.part===2||HV.partOn){const lb=()=>r.querySelector('span').textContent='가르마 (화면 왼쪽 기준) '+Math.round(HV.part*100)+':'+(100-Math.round(HV.part*100)),r=mkRow(e,'',.1,.9,.01,HV.part,100,'%',0,v=>{HV.part=v;hdirty=true;hfill();lb()});lb()}}}
+
 // ---------- 카메라 ----------
 const fit=()=>Math.max(3.6,.95/(.315*cam.aspect));
 function view(n,snap){const d=fit(),h=ht*.52;let p,t=[0,h,0];
@@ -206,23 +304,20 @@ new ResizeObserver(rs).observe(view$);
 // ---------- UI ----------
 function tabs(){const t=$('#tabs');t.innerHTML='';Object.keys(TABS).forEach(n=>{const b=document.createElement('button');b.textContent=n;b.className='btn'+(n===cur?' p':'');b.onclick=()=>{cur=n;tabs();sl()};t.append(b)})}
 function sl(){const e=$('#sliders');e.innerHTML='';
- TABS[cur].forEach(([k,l])=>{const [mn,mx]=RG[k],r=document.createElement('div');r.className='row';
-  r.innerHTML='<div><span>'+l+'</span><b></b></div><input type="range" min="'+mn+'" max="'+mx+'" step="0.01">';
-  const i=r.querySelector('input'),o=r.querySelector('b'),show=()=>o.textContent=Math.round(V[k]*100)+'%';
-  i.value=V[k];show();i.oninput=()=>{V[k]=+i.value;show();dirty=true};e.append(r)})}
+ TABS[cur].forEach(([k,l])=>{const[mn,mx]=RG[k];mkRow(e,l,mn,mx,.01,V[k],100,'%',0,v=>{V[k]=v;dirty=true})})}
 const st=t=>$('#st').textContent=t;
-$('#skin').oninput=()=>paint();$('#iris').oninput=e=>{PC.iris=e.target.value;paint()};$('#irisR').onclick=()=>{delete PC.iris;paint()};$('#eref').oninput=applyEye;$('#bPaintReset').onclick=()=>{PC={};paint();st('부위 색을 초기화했어요')};
+$('#skin').oninput=()=>{paint();hcol()};$('#iris').oninput=e=>{PC.iris=e.target.value;paint()};$('#irisR').onclick=()=>{delete PC.iris;paint()};$('#eref').oninput=applyEye;$('#bPaintReset').onclick=()=>{PC={};paint();st('부위 색을 초기화했어요')};
 $('#rough').oninput=e=>skin.roughness=+e.target.value;
 $('#light').onchange=e=>key.color.set([0xffffff,0xffddb8,0xc8dcff][+e.target.value]);
 const setG=g=>{if(g!==GEN){GEN=g;build(g)}};
 const PR={m:{g:'m',v:{fat:.85,muscle:1.1},c:'#2a1c14'},f:{g:'f',v:{hip:1.03},c:'#4a2c1c'},mm:{g:'m',v:{muscle:1.7,shoulder:1.12,chest:1.1,neck:1.15,fat:.5,build:1.05,bust:1.2},c:'#1c1410'},ff:{g:'f',v:{bust:1.6,hip:1.15,waist:.88,glute:1.5,fat:1.25,belly:.9},c:'#6a3a22'}};
-document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const p=PR[b.dataset.p];V={...D,...p.v};setG(p.g);hair.color.set(p.c);$('#hc').value=p.c;sl();dirty=true;st('프리셋을 적용했어요')});
-document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{setG(b.dataset.g);dirty=true;st((b.dataset.g==='m'?'남성':'여성')+' 모델로 바꿨어요')});
+document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const p=PR[b.dataset.p];V={...D,...p.v};setG(p.g);hair.color.set(p.c);$('#hc').value=p.c;HV.color=p.c;hdirty=false;hStyle(PR_HS[b.dataset.p],true);sl();dirty=true;st('프리셋을 적용했어요')});
+document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{setG(b.dataset.g);if(!hdirty)hStyle(b.dataset.g==='m'?'part':'long',true);dirty=true;st((b.dataset.g==='m'?'남성':'여성')+' 모델로 바꿨어요')});
 $('#hc').oninput=e=>hair.color.set(e.target.value);
-$('#bReset').onclick=()=>{V={...D};PC={};paint();sl();dirty=true;st('기본 체형으로 초기화했어요')};
+$('#bReset').onclick=()=>{V={...D};PC={};paint();sl();hdirty=false;hStyle(GEN==='m'?'part':'long',true);dirty=true;st('기본 체형으로 초기화했어요')};
 $('#bRand').onclick=()=>{setG(Math.random()<.5?'m':'f');for(const k in V){const[a,b]=RG[k];V[k]=Math.min(b,Math.max(a,1+(Math.random()-.5)*.5))}sl();dirty=true;st('랜덤 체형을 만들었어요')};
-$('#bSave').onclick=()=>{try{localStorage.setItem('shc2',JSON.stringify({V,GEN,PC,er:$('#eref').value,skin:$('#skin').value,hc:$('#hc').value}));st('설정을 저장했어요 (이 브라우저에 보관)')}catch(e){st('이 환경에서는 저장소를 쓸 수 없어요')}};
-$('#bLoad').onclick=()=>{try{const d=JSON.parse(localStorage.getItem('shc2'));if(!d)throw 0;V={...D,...d.V};setG(d.GEN||'m');if(d.hc){hair.color.set(d.hc);$('#hc').value=d.hc}if(d.skin)$('#skin').value=d.skin;PC=d.PC||{};if(d.er){$('#eref').value=d.er;applyEye()}paint();sl();dirty=true;st('저장된 설정을 불러왔어요')}catch(e){st('저장된 설정이 없어요')}};
+$('#bSave').onclick=()=>{try{localStorage.setItem('shc2',JSON.stringify({V,GEN,PC,er:$('#eref').value,skin:$('#skin').value,hc:$('#hc').value,hv:HV}));st('설정을 저장했어요 (이 브라우저에 보관)')}catch(e){st('이 환경에서는 저장소를 쓸 수 없어요')}};
+$('#bLoad').onclick=()=>{try{const d=JSON.parse(localStorage.getItem('shc2'));if(!d)throw 0;V={...D,...d.V};setG(d.GEN||'m');if(d.hc){hair.color.set(d.hc);$('#hc').value=d.hc}if(d.skin)$('#skin').value=d.skin;if(d.hv){Object.assign(HV,d.hv);hdirty=true;hairUI();hfill()}PC=d.PC||{};if(d.er){$('#eref').value=d.er;$('#eref').dispatchEvent(new Event('input'))}paint();sl();dirty=true;st('저장된 설정을 불러왔어요')}catch(e){st('저장된 설정이 없어요')}};
 
 // ---------- GLB 내보내기 (저장 확장자 제한 때문에 zip 안에 human.glb) ----------
 const T=new Uint32Array(256).map((_,n)=>{let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;return c>>>0});
@@ -245,7 +340,7 @@ $('#bGlb').onclick=()=>{
 };
 
 // ---------- 시작 ----------
-tabs();sl();rs();applyEye();build(GEN);deform();dirty=false;view('front',true);
+tabs();sl();hairUI();rs();applyEye();bindNum($('#rough'),$('#roughN'),100,0);bindNum($('#eref'),$('#ervN'),100,0);build(GEN);deform();dirty=false;view('front',true);
 (function loop(){requestAnimationFrame(loop);
  if(dirty){deform();dirty=false}
  if(goal){cam.position.lerp(goal.p,.12);ctl.target.lerp(goal.t,.12);if(cam.position.distanceTo(goal.p)<.01)goal=null}
