@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Semi-Realistic Human Creator</title>
+<title>Semi-Realistic Human Creator + Clothes</title>
 <style>
 :root{--bg:#f4f1ec;--pn:#fff;--tx:#1d1b19;--mu:#7a746c;--ac:#c2623a;--bd:#e2ddd5;--v1:#efeae2;--v2:#d6cfc3;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141311;--pn:#1e1c1a;--tx:#ece8e2;--mu:#9a938a;--ac:#e08a5f;--bd:#34302b;--v1:#2c2925;--v2:#161412;color-scheme:dark}}
@@ -67,7 +67,7 @@ const TABS={
 '팔':[['armLen','전체 팔 길이'],['uArmLen','상완 길이'],['fArmLen','하완 길이'],['uArmTh','상완 두께'],['fArmTh','하완 두께'],['hand','손 크기']],
 '다리':[['legLen','전체 다리 길이'],['thighLen','허벅지 길이'],['shinLen','종아리 길이'],['thighTh','허벅지 두께'],['shinTh','종아리 두께'],['foot','발 크기']],
 '얼굴형':[['head','얼굴 전체 크기',.8,1.3],['faceW','얼굴 너비'],['faceL','얼굴 길이'],['jaw','턱 너비'],['chin','턱끝 길이',.5,1.8],['cheek','광대뼈 볼륨',.4,2],['brow','이마·눈썹뼈',.4,2]],
-'이목구비':[['nose','코 크기'],['noseLen','코 길이(돌출)',.5,1.8],['noseW','코 너비',.6,1.6],['lipTh','입술 두께',.3,2],['lipW','입술 너비',.7,1.4],['mouthY','입 위치',.5,1.5],['eye','눈 크기'],['eyeGap','눈 간격'],['ear','귀 크기']]};
+'이목구비':[['nose','코 크기'],['noseLen','코 길이(돌출)',.5,1.8],['noseW','코 너비',.6,1.6],['lipTh','입술 두께',.3,2],['lipW','입술 너비',.7,1.4],['mouthY','입 위치',.5,1.5],['eye','눈 크기'],['eyeGap','눈 간격'],['ear','귀 크기']],'👕 옷':[]};
 const D={},RG={};Object.values(TABS).flat().forEach(a=>{D[a[0]]=1;RG[a[0]]=[a[2]??.7,a[3]??1.4]});
 let V={...D},GEN='m',dirty=true,ht=1.8,goal=null,cur='비율',C=null;
 // ---------- renderer / scene ----------
@@ -138,7 +138,7 @@ function build(k){if(C){G.remove(C.root);C.ms.forEach(m=>{m.o.geometry.dispose()
   g.setAttribute('position',m.A);g.setAttribute('normal',m.N);g.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(m.Jx,4));g.setAttribute('skinWeight',new THREE.Float32BufferAttribute(m.Wt,4));
   if(m.col){m.cA=new THREE.BufferAttribute(m.col,3);g.setAttribute('color',m.cA)}g.setIndex(new THREE.BufferAttribute(m.I,1));
   const o=m.o=new THREE.SkinnedMesh(g,mats[i]);o.name=nms[i];o.frustumCulled=false;o.castShadow=true;o.receiveShadow=i===2;G.add(o);o.bind(sk,new THREE.Matrix4())});
- mkHair();
+ mkHair();gAll();
  paint();dirty=true}
 // ---------- 부위별 색칠 (정점 색, 스킨 웨이트로 경계를 부드럽게) ----------
 const RN=[['head','얼굴'],['neck','목'],['chest','가슴·상체'],['belly','배·골반'],['arms','팔'],['hands','손'],['legs','다리'],['feet','발'],['lips','입술'],['iris','눈동자']];
@@ -187,9 +187,10 @@ function deform(){if(!C)return;const v=V,S=C.nm.map(n=>jscale(n,v)),Jo=C.Jo,Jn=[
  let mn=9,mx=-9;
  AM().forEach((m,mi)=>{const out=m.A.array;
   for(let i=0;i<m.n;i++){p[0]=m.P0[3*i];p[1]=m.P0[3*i+1];p[2]=m.P0[3*i+2];
-   if(mi===2)volume(p,i,m);if(m.hw[i]>.01)face(p,m.hw[i],C.L);
+   if(mi===2){volume(p,i,m);const q=m.dl||(m.dl=new Float32Array(m.n*3));q[3*i]=p[0]-m.P0[3*i];q[3*i+1]=p[1]-m.P0[3*i+1];q[3*i+2]=p[2]-m.P0[3*i+2]}else if(m.gv)gdisp(p,m,i);if(m.hw[i]>.01)face(p,m.hw[i],C.L);
    let X=0,Y=0,Z=0;for(let c=0;c<4;c++){const w=m.Wt[i*4+c];if(!w)continue;const j=m.Jx[i*4+c],o=Jo[j],a=Jn[j],s=S[j];X+=w*(a[0]+s[0]*(p[0]-o[0]));Y+=w*(a[1]+s[1]*(p[1]-o[1]));Z+=w*(a[2]+s[2]*(p[2]-o[2]))}
-   out[3*i]=X;out[3*i+1]=Y;out[3*i+2]=Z;if(mi===2){if(Y<mn)mn=Y;if(Y>mx)mx=Y}}});
+   if(m.gv){const q=gpush(m,i,X,Y,Z);X=q[0];Y=q[1];Z=q[2]}out[3*i]=X;out[3*i+1]=Y;out[3*i+2]=Z;if(mi===2){if(Y<mn)mn=Y;if(Y>mx)mx=Y}}
+  if(mi===2)C.bn=nrm(out,m.I,m.wid,m.nw)});
  const H=v.height;
  AM().forEach(m=>{const o=m.A.array;for(let i=0;i<o.length;i+=3){o[i]*=H;o[i+1]=(o[i+1]-mn)*H;o[i+2]*=H}m.N.array.set(nrm(o,m.I,m.wid,m.nw));m.A.needsUpdate=m.N.needsUpdate=true});
  Jn.forEach(a=>{a[0]*=H;a[1]=(a[1]-mn)*H;a[2]*=H});
@@ -226,7 +227,7 @@ const PR_HS={m:'part',f:'long',mm:'crew',ff:'long'};
 const HV={style:'part',gloss:.55,color:'#2a1c14',part:.3,gap:.4,sweep:.45,lift:.25,detail:.6,fit:.35,...HS.part.d};let hdirty=false;
 const KA=[0,.785,1.31,1.745,2.44,PI],ipol=(t,x)=>{for(let k=1;k<6;k++)if(x<=KA[k])return t[k-1]+(t[k]-t[k-1])*(x-KA[k-1])/(KA[k]-KA[k-1]);return t[5]};
 const sm=(x,a,b)=>{const t=cl((x-a)/(b-a));return t*t*(3-2*t)};
-const AM=()=>C.hr?C.ms.concat([C.hr]):C.ms;
+const AM=()=>C.ms.concat(C.hr?[C.hr]:[],Object.values(GMo));
 function hdata(){if(C.hd)return C.hd;const B=C.ms[2],L=C.L;let yT=-9;
  for(let i=0;i<B.n;i++)if(B.hw[i]>.5&&B.P0[3*i+1]>yT)yT=B.P0[3*i+1];
  const c=[0,yT-.9*(yT-L.eye[0].c[1]),L.ear[2]],AZ=48,EL=24,mp=new Float32Array(AZ*EL),ix=(a,b)=>((a+AZ)%AZ)*EL+Math.min(EL-1,Math.max(0,b));
@@ -331,7 +332,7 @@ new ResizeObserver(rs).observe(view$);
 
 // ---------- UI ----------
 function tabs(){const t=$('#tabs');t.innerHTML='';Object.keys(TABS).forEach(n=>{const b=document.createElement('button');b.textContent=n;b.className='btn'+(n===cur?' p':'');b.onclick=()=>{cur=n;tabs();sl()};t.append(b)})}
-function sl(){const e=$('#sliders');e.innerHTML='';
+function sl(){const e=$('#sliders');e.innerHTML='';if(cur==='👕 옷')return cUI(e);
  TABS[cur].forEach(([k,l])=>{const[mn,mx]=RG[k];mkRow(e,l,mn,mx,.01,V[k],100,'%',0,v=>{V[k]=v;dirty=true})})}
 const st=t=>$('#st').textContent=t;
 $('#skin').oninput=()=>{paint();hcol()};$('#iris').oninput=e=>{PC.iris=e.target.value;paint()};$('#irisR').onclick=()=>{delete PC.iris;paint()};$('#eref').oninput=applyEye;$('#bPaintReset').onclick=()=>{PC={};paint();st('부위 색을 초기화했어요')};
@@ -344,8 +345,8 @@ document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{setG(b.dataset.g
 $('#hc').oninput=e=>hair.color.set(e.target.value);
 $('#bReset').onclick=()=>{V={...D};PC={};paint();sl();hdirty=false;hStyle(GEN==='m'?'part':'long',true);dirty=true;st('기본 체형으로 초기화했어요')};
 $('#bRand').onclick=()=>{setG(Math.random()<.5?'m':'f');for(const k in V){const[a,b]=RG[k];V[k]=Math.min(b,Math.max(a,1+(Math.random()-.5)*.5))}sl();dirty=true;st('랜덤 체형을 만들었어요')};
-$('#bSave').onclick=()=>{try{localStorage.setItem('shc2',JSON.stringify({V,GEN,PC,er:$('#eref').value,skin:$('#skin').value,hc:$('#hc').value,hv:HV,ql:QL}));st('설정을 저장했어요 (이 브라우저에 보관)')}catch(e){st('이 환경에서는 저장소를 쓸 수 없어요')}};
-$('#bLoad').onclick=()=>{try{const d=JSON.parse(localStorage.getItem('shc2'));if(!d)throw 0;V={...D,...d.V};setG(d.GEN||'m');if(d.hc){hair.color.set(d.hc);$('#hc').value=d.hc}if(d.skin)$('#skin').value=d.skin;if(d.hv){Object.assign(HV,d.hv);hdirty=true;hairUI();hfill()}if(d.ql){Object.assign(QL,d.ql);qualUI();applyQ(false)}PC=d.PC||{};if(d.er){$('#eref').value=d.er;$('#eref').dispatchEvent(new Event('input'))}paint();sl();dirty=true;st('저장된 설정을 불러왔어요')}catch(e){st('저장된 설정이 없어요')}};
+$('#bSave').onclick=()=>{try{localStorage.setItem('shc2',JSON.stringify({V,GEN,PC,er:$('#eref').value,skin:$('#skin').value,hc:$('#hc').value,hv:HV,ql:QL,gs:GS}));st('설정을 저장했어요 (이 브라우저에 보관)')}catch(e){st('이 환경에서는 저장소를 쓸 수 없어요')}};
+$('#bLoad').onclick=()=>{try{const d=JSON.parse(localStorage.getItem('shc2'));if(!d)throw 0;V={...D,...d.V};setG(d.GEN||'m');if(d.hc){hair.color.set(d.hc);$('#hc').value=d.hc}if(d.skin)$('#skin').value=d.skin;if(d.hv){Object.assign(HV,d.hv);hdirty=true;hairUI();hfill()}if(d.gs){for(const k in d.gs)if(GS[k])Object.assign(GS[k],d.gs[k]);gAll()}if(d.ql){Object.assign(QL,d.ql);qualUI();applyQ(false)}PC=d.PC||{};if(d.er){$('#eref').value=d.er;$('#eref').dispatchEvent(new Event('input'))}paint();sl();dirty=true;st('저장된 설정을 불러왔어요')}catch(e){st('저장된 설정이 없어요')}};
 
 // ---------- GLB 내보내기 (저장 확장자 제한 때문에 zip 안에 human.glb) ----------
 const T=new Uint32Array(256).map((_,n)=>{let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;return c>>>0});
@@ -366,6 +367,199 @@ $('#bGlb').onclick=()=>{
   }catch(e){st(e&&e.code==='declined'?'저장을 취소했어요':'저장 실패: '+((e&&e.message)||e))}
  },{binary:true});
 };
+
+// ---------- 옷 (윗옷·브라·팬티·치마·바지) : 몸 단면을 따라 만든 절차적 옷 + 몸 슬라이더 연동 ----------
+const GK=['top','bra','pty','skirt','pants'],TG=['tight','타이트 ↔ 헐렁',0,1,100,'%'],TWP=['wrap','밀착 (몸에 딱 맞게)',0,1,100,'%'],TH=['th','원단 두께',0,1,100,'%'];
+const GD={
+ top:{n:'윗옷',s:[['len','총장 (허리 기준)',-.14,.26,100,'cm'],['sl','소매 길이 (0=민소매)',0,1,100,'%'],['sw','소매 통 (헐렁함)',0,1,100,'%'],['neck','앞 넥라인 파임',0,.16,100,'cm'],['cl','목 높이 (터틀넥)',0,.1,100,'cm'],['fl','밑단 퍼짐',0,1,100,'%'],TG,TWP,TH]},
+ bra:{n:'브라',s:[['cup','컵 높이',.03,.11,100,'cm'],['band','밑밴드 폭',0,.1,100,'cm'],['plunge','앞 가운데 파임',0,.07,100,'cm'],['push','모아올림 볼륨',0,1,100,'%'],['strap','어깨끈 굵기 (0=스트랩리스)',0,.03,100,'cm'],['sx','어깨끈 간격',.04,.12,100,'cm'],TG,TWP,TH]},
+ pty:{n:'팬티',s:[['rise','허리 높이',-.03,.14,100,'cm'],['cut','레그 컷 (하이컷)',0,1,100,'%'],['back','뒤 커버',0,1,100,'%'],TG,TWP,TH]},
+ skirt:{n:'치마',s:[['rise','허리 높이',-.02,.14,100,'cm'],['len','치마 길이',.08,.95,100,'cm'],['fl','퍼짐 (− 는 좁게)',-.6,1.4,100,'%'],['wave','밑단 물결',0,1,100,'%'],TG,TWP,TH]},
+ pants:{n:'바지',s:[['rise','허리 높이',-.04,.12,100,'cm'],['len','밑단 높이 (바닥 기준)',.1,.75,100,'cm'],['fl','통 넓이 (− 는 스키니)',-.6,1.2,100,'%'],TG,TWP,TH]}};
+const MP={cotton:{n:'면',gl:.2,pat:.6,tx:'weave'},denim:{n:'데님',gl:.15,pat:1,tx:'twill'},silk:{n:'실크 · 새틴',gl:.75,pat:0,sh:1},leather:{n:'가죽',gl:.6,pat:.7,tx:'grain',cc:.4},knit:{n:'니트',gl:.05,pat:1.5,tx:'knit',sh:1},latex:{n:'라텍스',gl:.95,pat:0,cc:1},lace:{n:'레이스',gl:.3,pat:0,tx:'lace',al:1},sheer:{n:'시스루 (비침)',gl:.4,pat:0,tx:'mesh',al:1,op:.5}};
+const g0=(m,c,o)=>({on:0,mat:m,c,gl:MP[m].gl,op:MP[m].op||1,pat:MP[m].pat,ts:1,...o});
+const GS={top:g0('cotton','#e9e5dc',{on:1,wrap:.3,len:-.02,sl:.35,sw:.3,neck:.03,cl:0,fl:.1,tight:.3,th:.3}),
+ bra:g0('silk','#2d2d33',{wrap:.8,cup:.07,band:.03,plunge:.02,push:.3,strap:.012,sx:.075,tight:0,th:.2}),
+ pty:g0('silk','#2d2d33',{wrap:.6,rise:.05,cut:.4,back:.8,tight:0,th:.2}),
+ skirt:g0('cotton','#7a3b3b',{wrap:0,rise:.06,len:.4,fl:.4,wave:0,tight:.2,th:.3}),
+ pants:g0('denim','#3a4f73',{on:1,wrap:.3,rise:.03,len:.12,fl:0,tight:.25,th:.4})};
+const GMo={},GMT={},GT={};let gcur='top',gT=0;
+function mkTex(k){const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');x.fillStyle=k==='lace'||k==='mesh'?'#fff':'#808080';x.fillRect(0,0,64,64);
+ if(k==='weave')for(let i=0;i<64;i+=2){x.fillStyle=i%4?'#b4b4b4':'#505050';x.fillRect(i,0,1,64);x.fillStyle=i%4?'#505050':'#b4b4b4';x.fillRect(0,i,64,1)}
+ if(k==='twill'){x.strokeStyle='#d4d4d4';x.lineWidth=2;for(let i=-64;i<128;i+=5){x.beginPath();x.moveTo(i,64);x.lineTo(i+64,0);x.stroke()}}
+ if(k==='knit'){x.strokeStyle='#dcdcdc';x.lineWidth=2;for(let r=0;r<64;r+=8)for(let q=0;q<64;q+=8){x.beginPath();x.moveTo(q,r+7);x.lineTo(q+4,r);x.lineTo(q+8,r+7);x.stroke()}}
+ if(k==='grain')for(let i=0;i<500;i++){const v=90+Math.random()*90|0;x.fillStyle='rgb('+v+','+v+','+v+')';x.beginPath();x.arc(Math.random()*64,Math.random()*64,1+Math.random()*1.5,0,6.3);x.fill()}
+ if(k==='lace'){x.fillStyle='#000';for(let r=0;r<64;r+=16)for(let q=0;q<64;q+=16){x.beginPath();x.arc(q+8,r+8,5,0,6.3);x.fill();x.beginPath();x.arc(q,r,3,0,6.3);x.fill()}}
+ if(k==='mesh'){x.fillStyle='#000';for(let r=0;r<64;r+=8)for(let q=0;q<64;q+=8)x.fillRect(q+2,r+2,5,5)}
+ const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t}
+const TXC={};
+function matUp(k){const g=GS[k],P=MP[g.mat],m=GMT[k]||(GMT[k]=new THREE.MeshPhysicalMaterial({side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-4}));
+ m.color.set(g.c);m.roughness=1-.92*g.gl;m.sheen=P.sh?new THREE.Color(0x777777):null;m.clearcoat=P.cc||0;m.clearcoatRoughness=.1;m.opacity=g.op;m.transparent=g.op<.99;m.depthWrite=!m.transparent;
+ const tk=P.tx;let T=GT[k];if(tk&&(!T||T.k!==tk)){T=GT[k]={k:tk,t:(TXC[tk]||(TXC[tk]=mkTex(tk))).clone()};T.t.wrapS=T.t.wrapT=THREE.RepeatWrapping;T.t.needsUpdate=true}else if(!tk)T=GT[k]=null;
+ m.bumpMap=m.alphaMap=null;m.alphaTest=0;
+ if(T){const r=40/g.ts;T.t.repeat.set(r,r);if(P.al){m.alphaMap=T.t;m.alphaTest=.5}else{m.bumpMap=T.t;m.bumpScale=g.pat*1.2}}
+ m.needsUpdate=true}
+// ----- 몸 단면 (정면 T포즈 기준, 높이/팔 위치별 타원 범위) -----
+const K4=['c0','a','c1','b'];
+function slc(){const B=C.ms[2],P=B.P0,n=B.n,jp=k=>C.Jo[C.nm.indexOf(k)];C.ji={};C.nm.forEach((m,i)=>C.ji[m]=i);
+ const A=C.ax={p:jp('pelvis')[1],s1:jp('spine_01')[1],s2:jp('spine_02')[1],s3:jp('spine_03')[1],n:jp('neck_01')[1],k:jp('calf_l')[1],u:jp('upperarm_l')[0],e:jp('lowerarm_l')[0],h:jp('hand_l')[0]};A.c=A.p-.115;
+ C.fj=C.nm.map(m=>FW[bs(m)]||0);C.mj=C.nm.map(m=>MW[bs(m)]||0);C.tj=C.nm.map(m=>/^(pelvis|spine)/.test(m)?1:0);
+ const AJ=C.nm.map(m=>/^(upperarm|lowerarm|hand|index|middle|ring|pinky|thumb)/.test(bs(m))),ARM=new Uint8Array(n);for(let i=0;i<n;i++){let a=0;for(let c=0;c<4;c++)if(AJ[B.Jx[4*i+c]])a+=B.Wt[4*i+c];ARM[i]=a>.35?1:0}
+ const mk=(lo,N,pick)=>{const st=.01,r=Array.from({length:N},()=>[9,-9,9,-9]);
+  const add=(k,u,v)=>{if(k<0||k>=N)return;const e=r[k];e[0]=Math.min(e[0],u);e[1]=Math.max(e[1],u);e[2]=Math.min(e[2],v);e[3]=Math.max(e[3],v)},PQ=new Array(n);
+  for(let i=0;i<n;i++){const q=pick(P[3*i],P[3*i+1],P[3*i+2],i);PQ[i]=q;if(!q)continue;add(Math.floor((q[0]-lo)/st),q[1],q[2])}
+  const TI=B.I,edge=(a,b)=>{let qa=PQ[a],qb=PQ[b];if(!qa||!qb||qa[0]===qb[0])return;if(qa[0]>qb[0]){const t=qa;qa=qb;qb=t}
+   const k0=Math.max(0,Math.floor((qa[0]-lo)/st)),k1=Math.min(N-1,Math.floor((qb[0]-lo)/st));
+   for(let k=k0;k<=k1;k++){const c=lo+(k+.5)*st;if(c<qa[0]||c>qb[0])continue;const t=(c-qa[0])/(qb[0]-qa[0]);add(k,qa[1]+t*(qb[1]-qa[1]),qa[2]+t*(qb[2]-qa[2]))}};
+  for(let t=0;t<TI.length;t+=3){edge(TI[t],TI[t+1]);edge(TI[t+1],TI[t+2]);edge(TI[t+2],TI[t])}
+  const o={lo,st,N,c0:[],a:[],c1:[],b:[]},ok=[];
+  for(let k=0;k<N;k++){const e=r[k];ok[k]=e[1]>=e[0];o.c0[k]=ok[k]?(e[0]+e[1])/2:0;o.a[k]=ok[k]?(e[1]-e[0])/2:.05;o.c1[k]=ok[k]?(e[2]+e[3])/2:0;o.b[k]=ok[k]?(e[3]-e[2])/2:.05}
+  const F=(d,s)=>K4.forEach(k=>o[k][d]=o[k][s]);
+  {let pv=-1;for(let i=0;i<N;i++){if(ok[i]){if(pv>=0&&i-pv>1)for(let j=pv+1;j<i;j++){const t=(j-pv)/(i-pv);K4.forEach(k=>o[k][j]=o[k][pv]*(1-t)+o[k][i]*t);ok[j]=2}pv=i}}
+   for(let i=0;i<N;i++)if(ok[i]===2)ok[i]=1}
+  for(let i=1;i<N;i++)if(!ok[i]&&ok[i-1]){F(i,i-1);ok[i]=1}
+  for(let i=N-2;i>=0;i--)if(!ok[i]&&ok[i+1]){F(i,i+1);ok[i]=1}
+  for(let t=0;t<2;t++)K4.forEach(k=>{const v=o[k].slice();for(let i=1;i<N-1;i++)o[k][i]=(v[i-1]+2*v[i]+v[i+1])/4});return o};
+ C.sl={t:mk(.1,150,(x,y,z,i)=>!ARM[i]&&y<A.n+.06&&(y<1.36||Math.abs(x)<=A.u)?[y,x,z]:null),
+  ll:mk(.1,100,(x,y,z)=>x>0&&y<A.p+.1?[y,x,z]:null),lr:mk(.1,100,(x,y,z)=>x<0&&y<A.p+.1?[y,x,z]:null),
+  al:mk(0,95,(x,y,z)=>x>0&&x>=A.u-.05&&y>1.3&&y<1.62?[x,y,z]:null),ar:mk(0,95,(x,y,z)=>x<0&&-x>=A.u-.05&&y>1.3&&y<1.62?[-x,y,z]:null)}}
+const at=(S,v)=>{let f=cl((v-S.lo)/S.st-.5,0,S.N-1.001);const i=f|0,t=f-i,L=k=>S[k][i]*(1-t)+S[k][i+1]*t;return{c0:L('c0'),a:L('a'),c1:L('c1'),b:L('b')}};
+const sq=(a,b,t,n)=>{const s=Math.sin(t),c=Math.cos(t),p=2/n;return[a*Math.sign(s)*Math.abs(s)**p,b*Math.sign(c)*Math.abs(c)**p]};
+const tp=(S,y,t,e,n)=>{const s=at(S,y),q=sq(s.a*1.03+e,s.b*1.03+e,t,n||2.5);return[s.c0+q[0],y,s.c1+q[1]]};
+const GRT=p=>[0,p[1],at(C.sl.t,p[1]).c1],TW=Math.PI*2;
+function drp(S,k,y0,fl){const o={lo:S.lo,st:S.st,N:S.N,c0:S.c0,c1:S.c1,a:S.a.slice(),b:S.b.slice()};let ma=0,mb=0;
+ for(let q=S.N-1;q>=0;q--){const y=S.lo+S.st*(q+.5);if(y>y0)continue;ma=Math.max(ma,S.a[q]);mb=Math.max(mb,S.b[q]);const f=1+(fl||0)*(y0-y)*1.4;
+  o.a[q]=Math.max(S.a[q],(S.a[q]+(ma-S.a[q])*k)*f);o.b[q]=Math.max(S.b[q],(S.b[q]+(mb-S.b[q])*k)*f)}return o}
+// ----- 격자 조각 추가 (바깥쪽이 앞면이 되도록 자동 정렬) -----
+function gadd(b,R,Cn,wr,cw,ln,kd,ref,f){const s=b.n,t=[],P=b.P;
+ for(let i=0;i<=R;i++)for(let j=0;j<Cn;j++){const u=wr?j/Cn:j/(Cn-1),p=f(i/R,j,u);P.push(p[0],p[1],p[2]);b.U.push(u*cw,i/R*ln);b.K.push(kd)}
+ const cc=wr?Cn:Cn-1;
+ for(let i=0;i<R;i++)for(let j=0;j<cc;j++){const a=s+i*Cn+j,c=a+Cn,e=s+i*Cn+(j+1)%Cn,d=e+Cn;t.push([a,e,c],[e,d,c])}
+ let sc=0;for(const[a,e,c]of t){const x=P[3*a],y=P[3*a+1],z=P[3*a+2],u1=P[3*e]-x,u2=P[3*e+1]-y,u3=P[3*e+2]-z,v1=P[3*c]-x,v2=P[3*c+1]-y,v3=P[3*c+2]-z,r=ref([x,y,z]);
+  sc+=(u2*v3-u3*v2)*(x-r[0])+(u3*v1-u1*v3)*(y-r[1])+(u1*v2-u2*v1)*(z-r[2])}
+ if(sc<0)t.forEach(q=>{const x=q[1];q[1]=q[2];q[2]=x});
+ t.forEach(q=>b.I.push(q[0],q[1],q[2]));b.n+=(R+1)*Cn}
+// ----- 옷별 형태 -----
+const GF={
+ top(b,g,A,T){const e0=.012+g.tight*.05+g.th*.006,D=drp(T,g.tight*.9,C.by,g.fl*.8),yT=A.n+.02+g.cl,hem=A.p+g.len;
+  gadd(b,56,64,1,1,.6,0,GRT,(t,j)=>{const th=j/64*TW,c=Math.cos(th),hi=yT-g.neck*Math.max(0,c)**6-g.neck*.35*Math.max(0,-c)**6,y=hem+(hi-hem)*t;return tp(D,y,th,e0,2.5)});
+  if(g.sl>.02)for(const s of[1,-1]){const AS=C.sl[s>0?'al':'ar'],x0=A.u-.05,x1=A.u+.03+g.sl*(A.h-.05-A.u-.03);
+   gadd(b,24,24,1,.3,x1-x0,1,p=>{const q=at(AS,Math.abs(p[0]));return[p[0],q.c0,q.c1]},(t,j)=>{const ax=x0+(x1-x0)*t,q=at(AS,ax),e=e0+g.sw*(.012+.05*t),w=sq(q.a*1.03+e,q.b*1.03+e,j/24*TW,2.3);return[s*ax,q.c0+w[0],q.c1+w[1]]})}},
+ bra(b,g,A,T){const e0=.007+g.tight*.04+g.th*.004,by=C.by,bb=by-.045-g.band,ct=by+g.cup,bt=by-.005,
+   gg=t=>sm(Math.cos(t),.05,.7),hi=t=>bt+(ct-bt)*gg(t)-g.plunge*gg(t)*Math.exp(-((Math.sin(t)/.3)**2));
+  gadd(b,22,64,1,.4,.2,0,GRT,(t,j)=>{const th=j/64*TW,y=bb+(hi(th)-bb)*t,e=e0+g.push*.022*gg(th)*Math.exp(-(((y-by)/.07)**2));return tp(T,y,th,e,2.5)});
+  if(g.strap>.002){const xs=g.sx,sf=Math.asin(Math.min(.95,(xs/at(T,by).a)**1.25)),yF=hi(sf),yB=bt,w=g.strap;let yS=A.n;for(let y=A.n+.05;y>by;y-=.005)if(at(T,y).a>=xs){yS=y;break}
+   for(const s of[1,-1])gadd(b,28,2,0,w,.5,0,GRT,(t,j)=>{const x=s*xs+(j?w/2:-w/2),fr=t<.5,u=fr?t*2:(t-.5)*2,y=fr?yF+(yS-yF)*u:yS+(yB-yS)*u,q=at(T,y),e=e0+.002,r=Math.min(.999,Math.abs(x-q.c0)/(q.a*1.03+e));
+    return[x,y,q.c1+(fr?1:-1)*(q.b*1.03+e)*Math.pow(1-Math.pow(r,2.5),.4)]})}},
+ pty(b,g,A,T){const e0=.006+g.tight*.04+g.th*.004,top=A.p+g.rise;
+  gadd(b,22,64,1,1,.3,0,GRT,(t,j)=>{const th=j/64*TW,l=A.c-.025+g.cut*.15*Math.abs(Math.sin(th))**1.3+(1-g.back)*.075*Math.max(0,-Math.cos(th))**2;return tp(T,l+(top-l)*t,th,e0,2.5)})},
+ skirt(b,g,A,T){const e0=.01+g.tight*.05+g.th*.005,top=A.p+g.rise,hem=top-g.len,D=drp(T,1,A.p,g.fl);
+  gadd(b,40,64,1,1.2,g.len,0,GRT,(t,j)=>{const th=j/64*TW,h=hem+g.wave*.05*Math.sin(3*th);return tp(D,h+(top-h)*t,th,e0,2.5)})},
+ pants(b,g,A,T){const e0=.009+g.tight*.045+g.th*.005,top=A.p+g.rise,yc=A.c+.03,hem=g.len,yt=Math.min(A.c+.12,top-.01);
+  gadd(b,16,64,1,1,.25,0,GRT,(t,j)=>tp(T,yc+(top-yc)*t,j/64*TW,e0+.0015,2.5));
+  for(const s of[1,-1]){const LS=C.sl[s>0?'ll':'lr'];
+   gadd(b,36,28,1,.5,yt-hem,0,p=>{const q=at(LS,p[1]);return[q.c0,p[1],q.c1]},(t,j)=>{const y=hem+(yt-hem)*t,q=at(LS,y),k=sm((yt-y)/(yt-hem),.15,1),e=Math.max(.0015,e0+g.fl*.07*k),w=sq(q.a*1.03+e,q.b*1.03+e,j/28*TW,2.2);return[q.c0+w[0],y,q.c1+w[1]]})}}};
+// ----- 스킨 가중치 (뼈 스케일을 따라 몸 슬라이더에 같이 변형) -----
+const nj=(m,s)=>C.ji[/^(sp|pe|ne)/.test(m)?m:m+s];
+function pr(L,v,s){let i=0;while(i<L.length-2&&v>L[i+1][0])i++;const a=L[i],b=L[i+1],t=cl((v-a[0])/((b[0]-a[0])||1e-6));return[nj(a[1],s),1-t,nj(b[1],s),t]}
+function wt(x,y,k){const A=C.ax;
+ if(k)return pr([[A.u-.04,'clavicle'],[A.u+.03,'upperarm'],[A.e-.05,'upperarm'],[A.e+.05,'lowerarm'],[A.h,'lowerarm']],Math.abs(x),x>0?'_l':'_r');
+ const L=[[.07,'calf'],[A.k-.06,'calf'],[A.k+.06,'thigh'],[A.p-.02,'thigh'],[A.p+.05,'pelvis'],[A.s1,'spine_01'],[A.s2,'spine_02'],[A.s3,'spine_03'],[A.n-.07,'spine_03'],[A.n+.03,'neck_01']];
+ if(y>A.s2+.04){const r=pr(L,y,'_l'),cw=sm(Math.abs(x),.03,A.u)*sm(y,A.s3,A.n-.05);return[r[0],r[1]*(1-cw),r[2],r[3]*(1-cw),C.ji['clavicle'+(x>0?'_l':'_r')],cw,0,0]}
+ const l=pr(L,y,'_l'),r=pr(L,y,'_r'),w=sm(x,-.05,.05);return[l[0],l[1]*w,l[2],l[3]*w,r[0],r[1]*(1-w),r[2],r[3]*(1-w)]}
+const GC=.03,gh3=(x,y,z)=>((x+300)*1000+(y+300))*1000+z+300;
+function ghash(){const B=C.ms[2],P=B.P0,h=new Map();for(let i=0;i<B.n;i++){const k=gh3(Math.floor(P[3*i]/GC),Math.floor(P[3*i+1]/GC),Math.floor(P[3*i+2]/GC));let l=h.get(k);if(!l)h.set(k,l=[]);l.push(i)}return C.gh=h}
+function near(x,y,z,K){K=K||4;const h=C.gh||ghash(),P=C.ms[2].P0,ix=Math.floor(x/GC),iy=Math.floor(y/GC),iz=Math.floor(z/GC),c=[];
+ for(let r=1;r<=16;r++){for(let a=ix-r;a<=ix+r;a++)for(let b=iy-r;b<=iy+r;b++)for(let d=iz-r;d<=iz+r;d++){if(r>1&&Math.abs(a-ix)<r&&Math.abs(b-iy)<r&&Math.abs(d-iz)<r)continue;const l=h.get(gh3(a,b,d));if(l)for(const i of l){const dx=P[3*i]-x,dy=P[3*i+1]-y,dz=P[3*i+2]-z;c.push([dx*dx+dy*dy+dz*dz,i])}}
+  if(c.length>=Math.max(4,K))break}
+ c.sort((p,q)=>p[0]-q[0]);return c.slice(0,K)}
+// 옷 정점은 가장 가까운 몸 정점들의 변형(가슴·배·엉덩이 부풀림, 살집·근육)을 그대로 따라감 → 곡선 체형에서도 안 찢어짐
+function gdisp(p,m,i){const dl=C.ms[2].dl;if(!dl)return;let x=0,y=0,z=0;for(let c=0;c<4;c++){const w=m.aw[4*i+c],a=m.an[4*i+c];x+=w*dl[3*a];y+=w*dl[3*a+1];z+=w*dl[3*a+2]}p[0]+=x;p[1]+=y;p[2]+=z}
+// 몸이 옷을 뚫고 나오면 몸 법선 방향으로 밀어냄 (안전망)
+function gpush(m,i,X,Y,Z){const r=m.rq[i];if(r>0){const B=C.ms[2],bo=B.A.array,bn=C.bn||B.n0;let qx=0,qy=0,qz=0,nx=0,ny=0,nz=0;
+ for(let c=0;c<4;c++){const w=m.aw[4*i+c];if(!w)continue;const a=m.an[4*i+c];qx+=w*bo[3*a];qy+=w*bo[3*a+1];qz+=w*bo[3*a+2];nx+=w*bn[3*a];ny+=w*bn[3*a+1];nz+=w*bn[3*a+2]}
+ const l=Math.hypot(nx,ny,nz)||1;nx/=l;ny/=l;nz/=l;const d=(X-qx)*nx+(Y-qy)*ny+(Z-qz)*nz;
+ if(d<r){const k=Math.min(r-d,.05);X+=nx*k;Y+=ny*k;Z+=nz*k}}return[X,Y,Z]}
+
+// 몸 삼각형 인접 정보 (한 번만 계산)
+function btri(){if(C.bt)return C.bt;const B=C.ms[2],I=B.I,t=Array.from({length:B.n},()=>[]);for(let f=0;f<I.length;f+=3){t[I[f]].push(f);t[I[f+1]].push(f);t[I[f+2]].push(f)}return C.bt=t}
+function cpt(px,py,pz,a,b,c,o){const abx=b[0]-a[0],aby=b[1]-a[1],abz=b[2]-a[2],acx=c[0]-a[0],acy=c[1]-a[1],acz=c[2]-a[2],apx=px-a[0],apy=py-a[1],apz=pz-a[2],
+ d1=abx*apx+aby*apy+abz*apz,d2=acx*apx+acy*apy+acz*apz;if(d1<=0&&d2<=0){o[0]=a[0];o[1]=a[1];o[2]=a[2];return}
+ const bpx=px-b[0],bpy=py-b[1],bpz=pz-b[2],d3=abx*bpx+aby*bpy+abz*bpz,d4=acx*bpx+acy*bpy+acz*bpz;if(d3>=0&&d4<=d3){o[0]=b[0];o[1]=b[1];o[2]=b[2];return}
+ const vc=d1*d4-d3*d2;if(vc<=0&&d1>=0&&d3<=0){const v=d1/(d1-d3);o[0]=a[0]+v*abx;o[1]=a[1]+v*aby;o[2]=a[2]+v*abz;return}
+ const cpx=px-c[0],cpy=py-c[1],cpz=pz-c[2],d5=abx*cpx+aby*cpy+abz*cpz,d6=acx*cpx+acy*cpy+acz*cpz;if(d6>=0&&d5<=d6){o[0]=c[0];o[1]=c[1];o[2]=c[2];return}
+ const vb=d5*d2-d1*d6;if(vb<=0&&d2>=0&&d6<=0){const w=d2/(d2-d6);o[0]=a[0]+w*acx;o[1]=a[1]+w*acy;o[2]=a[2]+w*acz;return}
+ const va=d3*d6-d5*d4;if(va<=0&&d4-d3>=0&&d5-d6>=0){const w=(d4-d3)/((d4-d3)+(d5-d6));o[0]=b[0]+w*(c[0]-b[0]);o[1]=b[1]+w*(c[1]-b[1]);o[2]=b[2]+w*(c[2]-b[2]);return}
+ const dn=1/(va+vb+vc),v=vb*dn,w=vc*dn;o[0]=a[0]+abx*v+acx*w;o[1]=a[1]+aby*v+acy*w;o[2]=a[2]+abz*v+acz*w}
+function gclear(P0,n,clr,wrap){const B=C.ms[2],BP=B.P0,BI=B.I,n0=B.n0,bt=btri(),q=[0,0,0];let moved=0;
+ for(let i=0;i<n;i++){const x=P0[3*i],y=P0[3*i+1],z=P0[3*i+2],nn=near(x,y,z,8);if(!nn.length||nn[0][0]>.0144)continue;
+  const seen=new Set();let bd=1e9,bnx=0,bny=0,bnz=0,bs=0;
+  for(const [,v] of nn)for(const f of bt[v]){if(seen.has(f))continue;seen.add(f);const A=[BP[3*BI[f]],BP[3*BI[f]+1],BP[3*BI[f]+2]],Bv=[BP[3*BI[f+1]],BP[3*BI[f+1]+1],BP[3*BI[f+1]+2]],Cv=[BP[3*BI[f+2]],BP[3*BI[f+2]+1],BP[3*BI[f+2]+2]];
+   cpt(x,y,z,A,Bv,Cv,q);const dx=x-q[0],dy=y-q[1],dz=z-q[2],d=dx*dx+dy*dy+dz*dz;if(d>=bd)continue;
+   let nx=(Bv[1]-A[1])*(Cv[2]-A[2])-(Bv[2]-A[2])*(Cv[1]-A[1]),ny=(Bv[2]-A[2])*(Cv[0]-A[0])-(Bv[0]-A[0])*(Cv[2]-A[2]),nz=(Bv[0]-A[0])*(Cv[1]-A[1])-(Bv[1]-A[1])*(Cv[0]-A[0]);
+   const l=Math.hypot(nx,ny,nz)||1;nx/=l;ny/=l;nz/=l;let sx=0,sy=0,sz=0;for(let k=0;k<3;k++){const vi=BI[f+k];sx+=n0[3*vi];sy+=n0[3*vi+1];sz+=n0[3*vi+2]}
+   if(nx*sx+ny*sy+nz*sz<0){nx=-nx;ny=-ny;nz=-nz}
+   bd=d;bnx=nx;bny=ny;bnz=nz;bs=dx*nx+dy*ny+dz*nz}
+  if(bd<1e9){let k=0;const wv=wrap&&wrap.length?wrap[i]:(wrap||0),far=wv>=.9?.25:.12;if(bs<clr)k=clr-bs;else if(wv>0&&bs<far)k=-(bs-clr)*wv*(bs<.05?1:(far-bs)/(far-.05));
+   if(k){P0[3*i]+=bnx*k;P0[3*i+1]+=bny*k;P0[3*i+2]+=bnz*k;moved++}}}
+ return moved}
+function gfix(P0,I,n,clr,wrap){clr=clr||.007;const nb=Array.from({length:n},()=>[]);for(let f=0;f<I.length;f+=3)for(let k=0;k<3;k++){const a=I[f+k],b=I[f+(k+1)%3];nb[a].push(b);nb[b].push(a)}
+ gclear(P0,n,clr);
+ for(let it=0;it<2;it++){const Q=Float32Array.from(P0);for(let i=0;i<n;i++){const l=nb[i];if(!l.length)continue;let x=0,y=0,z=0;for(const j of l){x+=P0[3*j];y+=P0[3*j+1];z+=P0[3*j+2]}x/=l.length;y/=l.length;z/=l.length;
+   Q[3*i]=P0[3*i]*.5+x*.5;Q[3*i+1]=P0[3*i+1]*.5+y*.5;Q[3*i+2]=P0[3*i+2]*.5+z*.5}
+  // 평활화는 바깥쪽 방향으로만 반영 (몸 안쪽으로 되돌아가지 않게 마지막에 다시 보정)
+  P0.set(Q);gclear(P0,n,clr)}
+ if(wrap&&(wrap.length||wrap>0))gclear(P0,n,clr,wrap)}
+function gtri(x,y,z){const B=C.ms[2],BP=B.P0,BI=B.I,bt=btri(),nn=near(x,y,z,8);if(!nn.length)return null;const seen=new Set(),q=[0,0,0];let bd=1e9,bf=-1,bq=null,bA,bB,bC;
+ for(const [,v] of nn)for(const f of bt[v]){if(seen.has(f))continue;seen.add(f);const A=[BP[3*BI[f]],BP[3*BI[f]+1],BP[3*BI[f]+2]],Bv=[BP[3*BI[f+1]],BP[3*BI[f+1]+1],BP[3*BI[f+1]+2]],Cv=[BP[3*BI[f+2]],BP[3*BI[f+2]+1],BP[3*BI[f+2]+2]];
+  cpt(x,y,z,A,Bv,Cv,q);const d=(x-q[0])**2+(y-q[1])**2+(z-q[2])**2;if(d<bd){bd=d;bf=f;bq=[q[0],q[1],q[2]];bA=A;bB=Bv;bC=Cv}}
+ if(bf<0)return null;const v0=[bB[0]-bA[0],bB[1]-bA[1],bB[2]-bA[2]],v1=[bC[0]-bA[0],bC[1]-bA[1],bC[2]-bA[2]],v2=[bq[0]-bA[0],bq[1]-bA[1],bq[2]-bA[2]],
+  dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],d00=dot(v0,v0),d01=dot(v0,v1),d11=dot(v1,v1),d20=dot(v2,v0),d21=dot(v2,v1),den=d00*d11-d01*d01;
+ let v=den?(d11*d20-d01*d21)/den:0,w=den?(d00*d21-d01*d20)/den:0,u=1-v-w;u=Math.max(u,0);v=Math.max(v,0);w=Math.max(w,0);const sm=u+v+w||1;
+ return[BI[bf],BI[bf+1],BI[bf+2],u/sm,v/sm,w/sm]}
+function gfin(k,b){const n=b.n,P0=Float32Array.from(b.P),Jx=new Uint16Array(n*4),Wt=new Float32Array(n*4),wf=new Float32Array(n),wm=new Float32Array(n),tr=new Float32Array(n),I=Uint16Array.from(b.I),wid=Uint32Array.from({length:n},(_,i)=>i);
+ const WR=new Float32Array(n),W0=GS[k].wrap||0,AX=C.ax,upper=(k==='top'||k==='bra');
+ for(let i=0;i<n;i++){const ax=Math.abs(P0[3*i]),y=P0[3*i+1];WR[i]=upper&&y>AX.s3-.03&&ax<AX.u+.08&&y<AX.n+.15?Math.max(W0,.95):W0}
+ gfix(P0,I,n,.006+(GS[k].th||0)*.006+(k==='top'||k==='skirt'?.007:0),WR);
+ for(let i=0;i<n;i++){const w=wt(P0[3*i],P0[3*i+1],b.K[i]);let s=0;for(let c=0;c<4;c++)s+=w[2*c+1]||0;s=s||1;
+  for(let c=0;c<4;c++){const j=w[2*c]||0,q=(w[2*c+1]||0)/s;Jx[4*i+c]=j;Wt[4*i+c]=q;wf[i]+=q*C.fj[j];wm[i]+=q*C.mj[j];tr[i]+=q*C.tj[j]}}
+ const ge=new THREE.BufferGeometry(),A=new THREE.BufferAttribute(new Float32Array(n*3),3),N=new THREE.BufferAttribute(new Float32Array(n*3),3);
+ ge.setAttribute('position',A);ge.setAttribute('normal',N);ge.setAttribute('uv',new THREE.Float32BufferAttribute(b.U,2));ge.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(Jx,4));ge.setAttribute('skinWeight',new THREE.Float32BufferAttribute(Wt,4));ge.setIndex(new THREE.BufferAttribute(I,1));
+ const o=new THREE.SkinnedMesh(ge,GMT[k]);o.name=GD[k].n;o.frustumCulled=false;o.castShadow=o.receiveShadow=true;G.add(o);o.bind(C.sk,new THREE.Matrix4());
+ const an=new Int32Array(n*4),aw=new Float32Array(n*4),rq=new Float32Array(n),B0=C.ms[2],n0=B0.n0,BJ=B0.Jx,BW=B0.Wt;
+ for(let i=0;i<n;i++){const x=P0[3*i],y=P0[3*i+1],z=P0[3*i+2],nn=near(x,y,z);let s=0;const ww=nn.map(q=>1/(q[0]+1e-4));ww.forEach(v=>s+=v);
+  for(let c=0;c<4;c++){const q=nn[c]||nn[0];an[4*i+c]=q[1];aw[4*i+c]=(nn[c]?ww[c]:0)/s}
+  {const t=gtri(x,y,z);if(t){an[4*i]=t[0];an[4*i+1]=t[1];an[4*i+2]=t[2];an[4*i+3]=t[0];aw[4*i]=t[3];aw[4*i+1]=t[4];aw[4*i+2]=t[5];aw[4*i+3]=0}}
+  const a=nn[0][1],s0=(x-B0.P0[3*a])*n0[3*a]+(y-B0.P0[3*a+1])*n0[3*a+1]+(z-B0.P0[3*a+2])*n0[3*a+2];rq[i]=s0>-.03&&s0<.3?Math.min(Math.max(s0,.005),.012):0;
+  // 스킨 가중치: 몸에 가까울수록 몸 가중치를 그대로 복사 (몸과 옷이 같은 뼈 스케일로 움직여 안 벌어짐)
+  const dist=Math.sqrt(nn[0][0]),tf=Math.min(1,Math.max(0,(dist-.03)/.06)),mp=new Map();
+  for(let c=0;c<4;c++){const j=Jx[4*i+c],q=Wt[4*i+c]*tf;if(q)mp.set(j,(mp.get(j)||0)+q)}
+  if(tf<1)for(let c=0;c<4;c++){const ac=aw[4*i+c],ab=an[4*i+c];if(!ac)continue;for(let k=0;k<4;k++){const q=BW[4*ab+k]*ac*(1-tf);if(q){const j=BJ[4*ab+k];mp.set(j,(mp.get(j)||0)+q)}}}
+  const top=[...mp.entries()].sort((u,v)=>v[1]-u[1]).slice(0,4);let st=0;top.forEach(e=>st+=e[1]);st=st||1;
+  for(let c=0;c<4;c++){const e=top[c];Jx[4*i+c]=e?e[0]:0;Wt[4*i+c]=e?e[1]/st:0}}
+ ge.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(Jx,4));ge.setAttribute('skinWeight',new THREE.Float32BufferAttribute(Wt,4));
+ return{n,P0,Jx,Wt,I,wid,nw:n,hw:new Float32Array(n),an,aw,rq,A,N,o,gv:1}}
+function gDel(k){if(GMo[k]){G.remove(GMo[k].o);GMo[k].o.geometry.dispose();delete GMo[k]}}
+function gOne(k){if(!C)return;if(!C.sl)slc();gDel(k);if(GS[k].on){matUp(k);const b={P:[],U:[],I:[],K:[],n:0};GF[k](b,GS[k],C.ax,C.sl.t);GMo[k]=gfin(k,b)}dirty=true}
+function gAll(){for(const k in GMo)gDel(k);GK.forEach(gOne)}
+// ----- 옷 UI -----
+function cUI(e){const k=gcur,g=GS[k],d=GD[k],mk=(h,c)=>{const r=document.createElement('div');r.className=c===undefined?'row':c;r.innerHTML=h;e.append(r);return r};
+ const bar=mk('','g');bar.style.gridTemplateColumns='repeat(3,1fr)';
+ GK.forEach(q=>{const b=document.createElement('button');b.className='btn'+(q===k?' p':'');b.textContent=(GS[q].on?'● ':'')+GD[q].n;b.onclick=()=>{gcur=q;sl()};bar.append(b)});
+ const r1=mk('<label class="chk"><input type="checkbox"> '+d.n+' 입기</label>',''),cb=r1.querySelector('input');cb.checked=!!g.on;cb.onchange=()=>{g.on=cb.checked?1:0;gOne(k);sl()};
+ if(g.on){
+  const r2=mk('<div><span>색상</span><input type="color"></div>'),ci=r2.querySelector('input');ci.value=g.c;ci.oninput=()=>{g.c=ci.value;matUp(k)};
+  const r3=mk('<div><span>재질</span><select>'+Object.keys(MP).map(m=>'<option value="'+m+'">'+MP[m].n+'</option>').join('')+'</select></div>'),se=r3.querySelector('select');se.value=g.mat;
+  se.onchange=()=>{g.mat=se.value;const P=MP[g.mat];g.gl=P.gl;g.pat=P.pat;g.op=P.op||1;matUp(k);sl()};
+  mk('<span style="font-size:12px;color:var(--mu)">형태</span>','').style.margin='10px 0 0';
+  d.s.forEach(([key,l,mn,mx,f,u])=>mkRow(e,l,mn,mx,.005,g[key],f,u,u==='cm'?1:0,v=>{g[key]=v;clearTimeout(gT);gT=setTimeout(()=>gOne(k),90)}));
+  mk('<span style="font-size:12px;color:var(--mu)">재질 세부</span>','').style.margin='10px 0 0';
+  mkRow(e,'광택 · 반질거림',0,1,.01,g.gl,100,'%',0,v=>{g.gl=v;matUp(k)});
+  mkRow(e,'불투명도',.1,1,.01,g.op,100,'%',0,v=>{g.op=v;matUp(k)});
+  mkRow(e,'무늬 · 요철 강도',0,3,.01,g.pat,100,'%',0,v=>{g.pat=v;matUp(k)});
+  mkRow(e,'무늬 크기',.4,3,.01,g.ts,100,'%',0,v=>{g.ts=v;matUp(k)})}
+ const bt=mk('<button class="btn" style="width:100%">모든 옷 벗기기</button>','');bt.style.marginTop='12px';bt.firstChild.onclick=()=>{GK.forEach(q=>GS[q].on=0);gAll();sl()};
+ mk('<span style="font-size:11px;color:var(--mu)">옷은 몸 슬라이더(키·체형·가슴·엉덩이 등)에 맞춰 같이 변해요. 팬티·브라 위에 바지·치마·윗옷이 겹쳐 입혀져요.</span>','').style.marginTop='8px'}
 
 // ---------- 시작 ----------
 tabs();sl();qualUI();rs();applyQ(true);applyEye();bindNum($('#rough'),$('#roughN'),100,0);bindNum($('#eref'),$('#ervN'),100,0);build(GEN);deform();dirty=false;view('front',true);
