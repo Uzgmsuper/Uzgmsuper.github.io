@@ -317,10 +317,10 @@ function hfill(){const m=C&&C.hr;if(!m)return;const S=HS[HV.style];m.o.visible=H
      rr+=HV.curve*.011*Math.sin(PI*t**2)*sm(au,.5,1.4);rr=Math.max(rr,R0-.001+.0022*Math.exp(-u*u/1.2));
      const g=sd*gh*(.55+.45*t)*w,lo=e>PI/2,rh=lo?rr*(1-(.08+.2*(1-HV.fit))*(1-.85*sm(au,1.3,2.6)*sm(Lh0,.05,.3))*sm(e,PI/2,2.1)):rr*se,ofs=[Lv[0]*g,0,Lv[2]*g];
      return{p:[c[0]+rh*sue+ofs[0],lo?c[1]-rr*(e-PI/2):c[1]+rr*ce,c[2]+rh*cue+ofs[2]],s:sue,c:cue,ofs}},
-    rw=(r,pt,sE,cE,tp,f,dr)=>{const k=b0+(j*LT+r)*3,h=wd*.5*tp,bz=h*.55+lf,x=pt[0],y=pt[1],z=pt[2],ed=lf-bz*.3;
-     put(k,x-cE*h+sE*ed,y,z+sE*h+cE*ed,f*.92,0,dr);put(k+1,x+sE*(lf+bz),y,z+cE*(lf+bz),f*1.06,0,dr);put(k+2,x+cE*h+sE*ed,y,z-sE*h+cE*ed,f*.92,0,dr)};
+    rw=(r,pt,sE,cE,tp,f,dr,bl=1)=>{const lx=lf*bl-.0009*(1-bl),k=b0+(j*LT+r)*3,h=wd*.5*tp,bz=h*.55+lx,x=pt[0],y=pt[1],z=pt[2],ed=lx-bz*.3;
+     put(k,x-cE*h+sE*ed,y,z+sE*h+cE*ed,f*.92,0,dr);put(k+1,x+sE*(lx+bz),y,z+cE*(lx+bz),f*1.06,0,dr);put(k+2,x+cE*h+sE*ed,y,z-sE*h+cE*ed,f*.92,0,dr)};
    let q0=null;
-   for(let r=0;r<LR;r++){const t=tr+(1-tr)*r/(LR-1),o=cp(t),a=sm(r,0,LR-1);rw(r,o.p,o.s,o.c,.6+.4*a,fs(r1)*kb*(.8+.2*a),0);q0=o}
+   for(let r=0;r<LR;r++){const t=tr+(1-tr)*r/(LR-1),o=cp(t),a=sm(r,0,LR-1);rw(r,o.p,o.s,o.c,.12+.88*a,fs(r1)*kb*(.8+.2*a),0,a);q0=o}
    const ph=q0.p,sE=q0.s,cE=q0.c,fo2=q0.ofs;
    for(let kk=1;kk<=LH;kk++){const q=kk/LH,s=q*Lh,
      o=(1-.3*sm(au,1.9,2.8))*((.004+(vol-1)*.01)*sm(q,0,.5)-(1-HV.fit)*.004*sm(q,0,.4)+(vol-1)*.012*q-HV.curl*.055*q*q+.0014*HV.detail*(r1-.5)*sm(q,0,.4)+.007*kd*(r1-.5)*q*Math.min(1,Lh*30)+HV.curve*Math.min(.055,.08*Lh)*Math.sin(PI*Math.pow(q,.8))+HV.scurve*Math.min(.03,.05*Lh)*Math.sin(2*PI*q)),
